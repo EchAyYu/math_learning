@@ -40,6 +40,14 @@ export const lessonsData: LessonsDataStructure = {
         { id: 1, title: "Đếm kẹo", type: "counting", difficulty: "Dễ" },
         { id: 2, title: "Tìm số thiếu", type: "puzzle", difficulty: "Trung bình" },
       ]
+    },
+    3: {
+      title: "Bài 3: Dấu so sánh (<, >, =)",
+      description: "Học các dấu so sánh lớn hơn, bé hơn, bằng nhau và luyện tập",
+      games: [
+        { id: 1, title: "So sánh số", type: "comparison", difficulty: "Dễ", description: "Chọn dấu đúng giữa hai số" },
+        { id: 2, title: "Trò chơi chọn dấu", type: "quiz", difficulty: "Trung bình", description: "Chọn đúng dấu <, >, = cho nhiều cặp số" },
+      ]
     }
   },
   2: { // Chapter 2
@@ -59,7 +67,6 @@ export const lessonsData: LessonsDataStructure = {
       description: "Học cách vẽ điểm và đoạn thẳng",
       games: [
         { id: 1, title: "Vẽ điểm và đoạn thẳng", type: "draw", difficulty: "Dễ" },
-      
       ]
     }
   }
@@ -69,9 +76,9 @@ export const chapterData = {
   '1': {
     title: 'Học đếm số',
     lessons: [
-      { id: '1', title: 'Bài 1: Điểm và đoạn thẳng', description: 'Giúp bé biết cách vẽ điểm và đoạn thẳng', completed: false },
-      { id: '2', title: 'Bài 2: Đếm từ 6-10', description: 'Tiếp tục đếm số', completed: false },
-      { id: '3', title: 'Bài 3: Ôn tập 1-10', description: 'Ôn tập tổng hợp', completed: false },
+      { id: '1', title: 'Bài 1: Đếm từ 1-10', description: 'Giúp bé học đếm số từ 1 đến 10', completed: false },
+      { id: '2', title: 'Bài 2: Đếm từ 10-20', description: 'Tiếp tục học đếm đến 20', completed: false },
+      { id: '3', title: 'Bài 3: Dấu so sánh (<, >, =)', description: 'Học dấu lớn hơn, bé hơn, bằng nhau', completed: false },
     ]
   },
   '2': {

@@ -1,17 +1,17 @@
 // games/[gameId].tsx - Game Dispatcher
-import { useLocalSearchParams } from 'expo-router';
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams } from "expo-router";
+import React from "react";
+import { View, Text, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-// Import các game components
-
-
+// Import các game components (bổ sung)
+import CountingGame from "./types/CountingGame";
+import PointLineGame from "./types/PointLineGame";
+//import ChooseSignGame from "./ChooseSignGame";
 
 // Shared data (nên move ra file riêng)
-import { lessonsData } from '../../../../data/lessonsData';
-import DrawPointGame from './types/PointLineGame';
-
+import { lessonsData } from "../../../../data/lessonsData";
+import DrawPointGame from "./types/PointLineGame";
 
 interface GameProps {
   chapterId: string;
@@ -47,7 +47,7 @@ export default function GameScreen() {
         <View style={styles.errorContainer}>
           <Text style={styles.errorTitle}>❌ Lỗi</Text>
           <Text style={styles.errorText}>
-            {!lessonData ? 'Bài học không tồn tại!' : 'Trò chơi không tồn tại!'}
+            {!lessonData ? "Bài học không tồn tại!" : "Trò chơi không tồn tại!"}
           </Text>
         </View>
       </SafeAreaView>
@@ -62,25 +62,28 @@ export default function GameScreen() {
       gameId: gameId as string,
       gameData: {
         ...gameData,
-        description: gameData.description || 'No description available'
-      }
+        description: gameData.description || "No description available",
+      },
     };
 
     switch (gameData.type) {
-      case 'draw':
-        return <DrawPointGame {...gameProps} />;
+      case "draw":
+      case "pointline": // giữ code cũ + hỗ trợ thêm alias
+        return <PointLineGame {...gameProps} />;
 
+      case "counting":
+        return <CountingGame {...gameProps} />;
 
-      
-  
-      
+      //case "quiz":
+      //  return <ChooseSignGame {...gameProps} />;
+
       default:
         return (
           <SafeAreaView style={styles.container}>
             <View style={styles.errorContainer}>
               <Text style={styles.errorTitle}>🚧</Text>
               <Text style={styles.errorText}>
-                Game type &quot;{gameData.type}&quot; chưa được implement!
+                Game type "{gameData.type}" chưa được implement!
               </Text>
               <Text style={styles.errorSubtext}>
                 Hãy thêm component cho loại game này
@@ -97,28 +100,28 @@ export default function GameScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f8ff',
+    backgroundColor: "#f0f8ff",
   },
   errorContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
   },
   errorTitle: {
     fontSize: 48,
-    marginBottom: 20
+    marginBottom: 20,
   },
   errorText: {
     fontSize: 20,
-    color: '#e74c3c',
-    textAlign: 'center',
+    color: "#e74c3c",
+    textAlign: "center",
     marginBottom: 10,
-    fontWeight: 'bold'
+    fontWeight: "bold",
   },
   errorSubtext: {
     fontSize: 14,
-    color: '#7f8c8d',
-    textAlign: 'center'
-  }
+    color: "#7f8c8d",
+    textAlign: "center",
+  },
 });
