@@ -4,20 +4,22 @@ import { router } from "expo-router";
 import Tutorial from "./components/Tutorial";
 
 export default function FixedMode() {
-  const [step, setStep] = useState<"tutorial" | "game" | "paused" | "result">(
+  const [step, setStep] = useState<"tutorial" | "select" | "game" | "result">(
     "tutorial"
   );
   const [numbers, setNumbers] = useState({ a: 0, b: 0 });
   const [score, setScore] = useState(0);
   const [question, setQuestion] = useState(1);
-  const totalQuestions = 10;
+  const [totalQuestions, setTotalQuestions] = useState<number | null>(null);
 
-  const generateNumbers = () => ({
-    a: Math.floor(Math.random() * 10) + 1,
-    b: Math.floor(Math.random() * 10) + 1,
-  });
+  const generateNumbers = () => {
+    const a = Math.floor(Math.random() * 10) + 1;
+    const b = Math.floor(Math.random() * 10) + 1;
+    return { a, b };
+  };
 
-  const startGame = () => {
+  const startGame = (count: number | null) => {
+    setTotalQuestions(count);
     setNumbers(generateNumbers());
     setScore(0);
     setQuestion(1);
@@ -30,7 +32,10 @@ export default function FixedMode() {
     else if (numbers.a > numbers.b) correct = ">";
     if (choice === correct) setScore((prev) => prev + 1);
 
-    if (question < totalQuestions) {
+    if (totalQuestions && question < totalQuestions) {
+      setQuestion((prev) => prev + 1);
+      setNumbers(generateNumbers());
+    } else if (totalQuestions === null) {
       setQuestion((prev) => prev + 1);
       setNumbers(generateNumbers());
     } else {
@@ -38,25 +43,54 @@ export default function FixedMode() {
     }
   };
 
-  // 👉 Tutorial
+  const exitGame = () => router.back();
+
   if (step === "tutorial") {
     return (
       <View style={styles.container}>
         <Tutorial />
-        <TouchableOpacity style={styles.startBtn} onPress={startGame}>
-          <Text style={styles.startText}>🎮 Bắt đầu chơi</Text>
-        </TouchableOpacity>
+        <Text style={styles.text}>
+          📘 Hướng dẫn: Trả lời các phép so sánh trong số lượng câu hỏi đã chọn.
+        </Text>
         <TouchableOpacity
-          style={styles.exitBtn}
-          onPress={() => router.back()} // quay về màn hình chọn chế độ
+          style={styles.startBtn}
+          onPress={() => setStep("select")}
         >
+          <Text style={styles.startText}>➡ Tiếp tục</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.exitBtn} onPress={exitGame}>
           <Text style={styles.startText}>⬅ Thoát</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  // 👉 Result
+  if (step === "select") {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Chọn số câu hỏi</Text>
+        {[10, 15, 20].map((num) => (
+          <TouchableOpacity
+            key={num}
+            style={styles.startBtn}
+            onPress={() => startGame(num)}
+          >
+            <Text style={styles.startText}>{num} câu</Text>
+          </TouchableOpacity>
+        ))}
+        <TouchableOpacity
+          style={styles.startBtn}
+          onPress={() => startGame(null)}
+        >
+          <Text style={styles.startText}>♾ Vô hạn</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.exitBtn} onPress={exitGame}>
+          <Text style={styles.startText}>⬅ Thoát</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   if (step === "result") {
     return (
       <View style={styles.container}>
@@ -64,43 +98,30 @@ export default function FixedMode() {
         <Text style={styles.text}>
           Điểm số: {score}/{totalQuestions}
         </Text>
-        <TouchableOpacity style={styles.startBtn} onPress={startGame}>
-          <Text style={styles.startText}>🔁 Chơi lại</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.exitBtn} onPress={() => router.back()}>
-          <Text style={styles.startText}>⬅ Thoát</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  // 👉 Paused
-  if (step === "paused") {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.title}>⏸ Trò chơi đã dừng</Text>
         <TouchableOpacity
           style={styles.startBtn}
-          onPress={() => setStep("game")}
+          onPress={() => setStep("select")}
         >
-          <Text style={styles.startText}>▶ Tiếp tục</Text>
+          <Text style={styles.startText}>🔁 Chơi lại</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.exitBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.exitBtn} onPress={exitGame}>
           <Text style={styles.startText}>⬅ Thoát</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  // 👉 Game
   return (
     <View style={styles.container}>
       <Text style={styles.title}>
-        Câu {question}/{totalQuestions}
+        Câu {question}
+        {totalQuestions ? `/${totalQuestions}` : ""}
       </Text>
-      <Text style={styles.numbers}>
-        {numbers.a} ? {numbers.b}
-      </Text>
+      <View style={styles.row}>
+        <Text style={styles.number}>{numbers.a}</Text>
+        <Text style={styles.placeholder}> ? </Text>
+        <Text style={styles.number}>{numbers.b}</Text>
+      </View>
       <View style={styles.row}>
         {["<", ">", "="].map((sign) => (
           <TouchableOpacity
@@ -113,16 +134,14 @@ export default function FixedMode() {
         ))}
       </View>
       <Text style={styles.text}>Điểm: {score}</Text>
-
-      {/* Nút điều khiển */}
       <View style={styles.row}>
         <TouchableOpacity
           style={styles.pauseBtn}
-          onPress={() => setStep("paused")}
+          onPress={() => setStep("select")}
         >
-          <Text style={styles.startText}>⏸ Dừng lại</Text>
+          <Text style={styles.startText}>⏸ Dừng</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.exitBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.exitBtn} onPress={exitGame}>
           <Text style={styles.startText}>⬅ Thoát</Text>
         </TouchableOpacity>
       </View>
@@ -136,35 +155,45 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#f0f8ff",
+    padding: 20,
   },
   title: { fontSize: 22, fontWeight: "bold", marginBottom: 20 },
-  numbers: { fontSize: 36, fontWeight: "bold", marginBottom: 20 },
-  row: { flexDirection: "row", marginBottom: 20, gap: 10 },
+  row: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
+  number: { fontSize: 36, fontWeight: "bold", marginHorizontal: 10 },
+  placeholder: { fontSize: 36, fontWeight: "bold", color: "#e67e22" },
   btn: {
     backgroundColor: "#3498db",
     padding: 15,
     borderRadius: 10,
     marginHorizontal: 10,
+    minWidth: 60,
+    alignItems: "center",
   },
   btnText: { color: "#fff", fontSize: 24, fontWeight: "bold" },
   startBtn: {
     backgroundColor: "#27ae60",
     padding: 15,
     borderRadius: 10,
-    marginTop: 20,
+    marginTop: 15,
+    minWidth: 150,
+    alignItems: "center",
   },
   pauseBtn: {
     backgroundColor: "#f39c12",
     padding: 15,
     borderRadius: 10,
-    marginTop: 20,
+    minWidth: 120,
+    alignItems: "center",
+    marginHorizontal: 10,
   },
   exitBtn: {
     backgroundColor: "#e74c3c",
     padding: 15,
     borderRadius: 10,
     marginTop: 20,
+    minWidth: 120,
+    alignItems: "center",
   },
   startText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
-  text: { fontSize: 18, marginTop: 10 },
+  text: { fontSize: 18, marginTop: 10, textAlign: "center" },
 });

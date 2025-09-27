@@ -3,28 +3,28 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import Tutorial from "./components/Tutorial";
 
-export default function LivesMode() {
+export default function ChooseSignGame() {
   const [step, setStep] = useState<"tutorial" | "select" | "game" | "result">(
     "tutorial"
   );
   const [numbers, setNumbers] = useState({ a: 0, b: 0 });
   const [score, setScore] = useState(0);
   const [question, setQuestion] = useState(1);
-  const [lives, setLives] = useState(3);
   const [totalQuestions, setTotalQuestions] = useState<number | null>(null);
 
+  // Sinh số ngẫu nhiên
   const generateNumbers = () => {
     const a = Math.floor(Math.random() * 10) + 1;
     const b = Math.floor(Math.random() * 10) + 1;
     return { a, b };
   };
 
+  // Bắt đầu game
   const startGame = (count: number | null) => {
     setTotalQuestions(count);
     setNumbers(generateNumbers());
     setScore(0);
     setQuestion(1);
-    setLives(3);
     setStep("game");
   };
 
@@ -32,20 +32,13 @@ export default function LivesMode() {
     let correct: "<" | ">" | "=" = "=";
     if (numbers.a < numbers.b) correct = "<";
     else if (numbers.a > numbers.b) correct = ">";
-    if (choice === correct) {
-      setScore((prev) => prev + 1);
-    } else {
-      setLives((prev) => prev - 1);
-      if (lives - 1 <= 0) {
-        setStep("result");
-        return;
-      }
-    }
+    if (choice === correct) setScore((prev) => prev + 1);
 
     if (totalQuestions && question < totalQuestions) {
       setQuestion((prev) => prev + 1);
       setNumbers(generateNumbers());
     } else if (totalQuestions === null) {
+      // Vô hạn: cứ sinh số mới
       setQuestion((prev) => prev + 1);
       setNumbers(generateNumbers());
     } else {
@@ -53,14 +46,17 @@ export default function LivesMode() {
     }
   };
 
-  const exitGame = () => router.back();
+  const exitGame = () => {
+    router.back();
+  };
 
+  // Tutorial
   if (step === "tutorial") {
     return (
       <View style={styles.container}>
         <Tutorial />
         <Text style={styles.text}>
-          📘 Hướng dẫn: Bạn có 3 mạng, sai 3 lần sẽ thua!
+          📘 Hướng dẫn: So sánh 2 số và chọn dấu thích hợp {"<"} {">"} {"="}.
         </Text>
         <TouchableOpacity
           style={styles.startBtn}
@@ -75,6 +71,7 @@ export default function LivesMode() {
     );
   }
 
+  // Select number of questions
   if (step === "select") {
     return (
       <View style={styles.container}>
@@ -101,11 +98,14 @@ export default function LivesMode() {
     );
   }
 
+  // Result
   if (step === "result") {
     return (
       <View style={styles.container}>
         <Text style={styles.title}>Kết thúc 🎉</Text>
-        <Text style={styles.text}>Điểm số: {score}</Text>
+        <Text style={styles.text}>
+          Điểm số: {score}/{totalQuestions}
+        </Text>
         <TouchableOpacity
           style={styles.startBtn}
           onPress={() => setStep("select")}
@@ -119,18 +119,22 @@ export default function LivesMode() {
     );
   }
 
+  // Game
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>❤️ Mạng còn lại: {lives}</Text>
       <Text style={styles.title}>
         Câu {question}
         {totalQuestions ? `/${totalQuestions}` : ""}
       </Text>
+
       <View style={styles.row}>
         <Text style={styles.number}>{numbers.a}</Text>
         <Text style={styles.placeholder}> ? </Text>
         <Text style={styles.number}>{numbers.b}</Text>
       </View>
+
+      <Text style={styles.text}>Chọn dấu để điền vào chỗ trống:</Text>
+
       <View style={styles.row}>
         {["<", ">", "="].map((sign) => (
           <TouchableOpacity
@@ -142,7 +146,9 @@ export default function LivesMode() {
           </TouchableOpacity>
         ))}
       </View>
+
       <Text style={styles.text}>Điểm: {score}</Text>
+
       <View style={styles.row}>
         <TouchableOpacity
           style={styles.pauseBtn}

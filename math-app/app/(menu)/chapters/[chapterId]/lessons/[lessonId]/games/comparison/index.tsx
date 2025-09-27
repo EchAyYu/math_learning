@@ -15,6 +15,7 @@ export default function ComparisonIndex() {
     { id: "timed", title: "⏱ Tính giờ" },
     { id: "lives", title: "❤️ 3 mạng" },
     { id: "hybrid", title: "⚡ Kết hợp" },
+    { id: "choose-sign", title: "🔢 Chọn dấu đúng" },
   ];
 
   return (

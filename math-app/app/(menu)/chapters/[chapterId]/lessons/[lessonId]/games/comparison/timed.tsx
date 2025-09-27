@@ -4,22 +4,32 @@ import { router } from "expo-router";
 import Tutorial from "./components/Tutorial";
 
 export default function TimedMode() {
-  const [step, setStep] = useState<"tutorial" | "game" | "paused" | "result">(
+  const [step, setStep] = useState<"tutorial" | "select" | "game" | "result">(
     "tutorial"
   );
   const [numbers, setNumbers] = useState({ a: 0, b: 0 });
   const [score, setScore] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(60);
+  const [question, setQuestion] = useState(1);
+  const [timeLeft, setTimeLeft] = useState(60); // 60 giây mặc định
+  const [totalQuestions, setTotalQuestions] = useState<number | null>(null);
 
-  const generateNumbers = () => ({
-    a: Math.floor(Math.random() * 10) + 1,
-    b: Math.floor(Math.random() * 10) + 1,
-  });
+  const generateNumbers = () => {
+    const a = Math.floor(Math.random() * 10) + 1;
+    const b = Math.floor(Math.random() * 10) + 1;
+    return { a, b };
+  };
+
+  const startGame = (count: number | null) => {
+    setTotalQuestions(count);
+    setNumbers(generateNumbers());
+    setScore(0);
+    setQuestion(1);
+    setTimeLeft(60);
+    setStep("game");
+  };
 
   useEffect(() => {
     if (step === "game") {
-      setNumbers(generateNumbers());
-      setTimeLeft(60);
       const timer = setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
@@ -39,37 +49,60 @@ export default function TimedMode() {
     if (numbers.a < numbers.b) correct = "<";
     else if (numbers.a > numbers.b) correct = ">";
     if (choice === correct) setScore((prev) => prev + 1);
-    setNumbers(generateNumbers());
+
+    if (totalQuestions && question < totalQuestions) {
+      setQuestion((prev) => prev + 1);
+      setNumbers(generateNumbers());
+    } else if (totalQuestions === null) {
+      setQuestion((prev) => prev + 1);
+      setNumbers(generateNumbers());
+    } else {
+      setStep("result");
+    }
   };
+
+  const exitGame = () => router.back();
 
   if (step === "tutorial") {
     return (
       <View style={styles.container}>
         <Tutorial />
+        <Text style={styles.text}>
+          📘 Hướng dẫn: Trả lời càng nhiều càng tốt trong 60 giây!
+        </Text>
         <TouchableOpacity
           style={styles.startBtn}
-          onPress={() => setStep("game")}
+          onPress={() => setStep("select")}
         >
-          <Text style={styles.startText}>🎮 Bắt đầu chơi</Text>
+          <Text style={styles.startText}>➡ Tiếp tục</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.exitBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.exitBtn} onPress={exitGame}>
           <Text style={styles.startText}>⬅ Thoát</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  if (step === "paused") {
+  if (step === "select") {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>⏸ Trò chơi đã dừng</Text>
+        <Text style={styles.title}>Chọn số câu hỏi</Text>
+        {[10, 15, 20].map((num) => (
+          <TouchableOpacity
+            key={num}
+            style={styles.startBtn}
+            onPress={() => startGame(num)}
+          >
+            <Text style={styles.startText}>{num} câu</Text>
+          </TouchableOpacity>
+        ))}
         <TouchableOpacity
           style={styles.startBtn}
-          onPress={() => setStep("game")}
+          onPress={() => startGame(null)}
         >
-          <Text style={styles.startText}>▶ Tiếp tục</Text>
+          <Text style={styles.startText}>♾ Vô hạn</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.exitBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.exitBtn} onPress={exitGame}>
           <Text style={styles.startText}>⬅ Thoát</Text>
         </TouchableOpacity>
       </View>
@@ -79,15 +112,15 @@ export default function TimedMode() {
   if (step === "result") {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>⏱ Hết giờ!</Text>
+        <Text style={styles.title}>Hết giờ ⏰</Text>
         <Text style={styles.text}>Điểm số: {score}</Text>
         <TouchableOpacity
           style={styles.startBtn}
-          onPress={() => setStep("tutorial")}
+          onPress={() => setStep("select")}
         >
           <Text style={styles.startText}>🔁 Chơi lại</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.exitBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.exitBtn} onPress={exitGame}>
           <Text style={styles.startText}>⬅ Thoát</Text>
         </TouchableOpacity>
       </View>
@@ -96,10 +129,16 @@ export default function TimedMode() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>⏱ Thời gian: {timeLeft}s</Text>
-      <Text style={styles.numbers}>
-        {numbers.a} ? {numbers.b}
+      <Text style={styles.title}>⏱ {timeLeft}s</Text>
+      <Text style={styles.title}>
+        Câu {question}
+        {totalQuestions ? `/${totalQuestions}` : ""}
       </Text>
+      <View style={styles.row}>
+        <Text style={styles.number}>{numbers.a}</Text>
+        <Text style={styles.placeholder}> ? </Text>
+        <Text style={styles.number}>{numbers.b}</Text>
+      </View>
       <View style={styles.row}>
         {["<", ">", "="].map((sign) => (
           <TouchableOpacity
@@ -112,15 +151,14 @@ export default function TimedMode() {
         ))}
       </View>
       <Text style={styles.text}>Điểm: {score}</Text>
-
       <View style={styles.row}>
         <TouchableOpacity
           style={styles.pauseBtn}
-          onPress={() => setStep("paused")}
+          onPress={() => setStep("select")}
         >
-          <Text style={styles.startText}>⏸ Dừng lại</Text>
+          <Text style={styles.startText}>⏸ Dừng</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.exitBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.exitBtn} onPress={exitGame}>
           <Text style={styles.startText}>⬅ Thoát</Text>
         </TouchableOpacity>
       </View>
@@ -134,35 +172,45 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#f0f8ff",
+    padding: 20,
   },
   title: { fontSize: 22, fontWeight: "bold", marginBottom: 20 },
-  numbers: { fontSize: 36, fontWeight: "bold", marginBottom: 20 },
-  row: { flexDirection: "row", marginBottom: 20, gap: 10 },
+  row: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
+  number: { fontSize: 36, fontWeight: "bold", marginHorizontal: 10 },
+  placeholder: { fontSize: 36, fontWeight: "bold", color: "#e67e22" },
   btn: {
     backgroundColor: "#3498db",
     padding: 15,
     borderRadius: 10,
     marginHorizontal: 10,
+    minWidth: 60,
+    alignItems: "center",
   },
   btnText: { color: "#fff", fontSize: 24, fontWeight: "bold" },
   startBtn: {
     backgroundColor: "#27ae60",
     padding: 15,
     borderRadius: 10,
-    marginTop: 20,
+    marginTop: 15,
+    minWidth: 150,
+    alignItems: "center",
   },
   pauseBtn: {
     backgroundColor: "#f39c12",
     padding: 15,
     borderRadius: 10,
-    marginTop: 20,
+    minWidth: 120,
+    alignItems: "center",
+    marginHorizontal: 10,
   },
   exitBtn: {
     backgroundColor: "#e74c3c",
     padding: 15,
     borderRadius: 10,
     marginTop: 20,
+    minWidth: 120,
+    alignItems: "center",
   },
   startText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
-  text: { fontSize: 18, marginTop: 10 },
+  text: { fontSize: 18, marginTop: 10, textAlign: "center" },
 });
