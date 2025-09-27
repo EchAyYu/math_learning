@@ -1,9 +1,16 @@
 import { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { router } from "expo-router";
 import Tutorial from "./components/Tutorial";
 
-export default function HybridMode() {
-  const [step, setStep] = useState<"tutorial" | "game" | "result">("tutorial");
+interface HybridModeProps {
+  onBack?: () => void;
+}
+
+export default function HybridMode({ onBack }: HybridModeProps) {
+  const [step, setStep] = useState<"tutorial" | "game" | "paused" | "result">(
+    "tutorial"
+  );
   const [numbers, setNumbers] = useState({ a: 0, b: 0 });
   const [score, setScore] = useState(0);
   const [question, setQuestion] = useState(1);
@@ -19,6 +26,7 @@ export default function HybridMode() {
   useEffect(() => {
     if (step === "game") {
       setNumbers(generateNumbers());
+      setTimeLeft(60);
       const timer = setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
@@ -37,16 +45,24 @@ export default function HybridMode() {
     let correct: "<" | ">" | "=" = "=";
     if (numbers.a < numbers.b) correct = "<";
     else if (numbers.a > numbers.b) correct = ">";
-    if (choice === correct) setScore(score + 1);
+    if (choice === correct) setScore((prev) => prev + 1);
 
     if (question < totalQuestions) {
-      setQuestion(question + 1);
+      setQuestion((prev) => prev + 1);
       setNumbers(generateNumbers());
     } else {
       setStep("result");
     }
   };
 
+  const resetGame = () => {
+    setStep("tutorial");
+    setScore(0);
+    setQuestion(1);
+    setTimeLeft(60);
+  };
+
+  // Tutorial
   if (step === "tutorial") {
     return (
       <View style={styles.container}>
@@ -57,10 +73,38 @@ export default function HybridMode() {
         >
           <Text style={styles.startText}>🎮 Bắt đầu chơi</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.exitBtn}
+          onPress={onBack ? onBack : () => router.back()}
+        >
+          <Text style={styles.startText}>⬅ Thoát</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
+  // Paused
+  if (step === "paused") {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>⏸ Trò chơi đã dừng</Text>
+        <TouchableOpacity
+          style={styles.startBtn}
+          onPress={() => setStep("game")}
+        >
+          <Text style={styles.startText}>▶ Tiếp tục</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.exitBtn}
+          onPress={onBack ? onBack : () => router.back()}
+        >
+          <Text style={styles.startText}>⬅ Thoát</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // Result
   if (step === "result") {
     return (
       <View style={styles.container}>
@@ -68,10 +112,20 @@ export default function HybridMode() {
         <Text style={styles.text}>
           Điểm số: {score}/{totalQuestions}
         </Text>
+        <TouchableOpacity style={styles.startBtn} onPress={resetGame}>
+          <Text style={styles.startText}>🔁 Chơi lại</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.exitBtn}
+          onPress={onBack ? onBack : () => router.back()}
+        >
+          <Text style={styles.startText}>⬅ Thoát</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
+  // Game
   return (
     <View style={styles.container}>
       <Text style={styles.title}>
@@ -92,6 +146,21 @@ export default function HybridMode() {
         ))}
       </View>
       <Text style={styles.text}>Điểm: {score}</Text>
+
+      <View style={styles.row}>
+        <TouchableOpacity
+          style={styles.pauseBtn}
+          onPress={() => setStep("paused")}
+        >
+          <Text style={styles.startText}>⏸ Dừng lại</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.exitBtn}
+          onPress={onBack ? onBack : () => router.back()}
+        >
+          <Text style={styles.startText}>⬅ Thoát</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -102,10 +171,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#f0f8ff",
+    padding: 20,
   },
   title: { fontSize: 22, fontWeight: "bold", marginBottom: 20 },
   numbers: { fontSize: 36, fontWeight: "bold", marginBottom: 20 },
-  row: { flexDirection: "row", gap: 15 },
+  row: { flexDirection: "row", gap: 15, marginBottom: 20 },
   btn: {
     backgroundColor: "#3498db",
     padding: 15,
@@ -118,6 +188,32 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 10,
     marginTop: 20,
+    minWidth: 150,
+    alignItems: "center",
+  },
+  pauseBtn: {
+    backgroundColor: "#f39c12",
+    padding: 15,
+    borderRadius: 10,
+    marginTop: 20,
+    minWidth: 150,
+    alignItems: "center",
+  },
+  exitBtn: {
+    backgroundColor: "#e74c3c",
+    padding: 15,
+    borderRadius: 10,
+    marginTop: 20,
+    minWidth: 150,
+    alignItems: "center",
+  },
+  backBtn: {
+    backgroundColor: "#95a5a6",
+    padding: 15,
+    borderRadius: 10,
+    marginTop: 15,
+    minWidth: 150,
+    alignItems: "center",
   },
   startText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
   text: { fontSize: 18, marginTop: 10 },

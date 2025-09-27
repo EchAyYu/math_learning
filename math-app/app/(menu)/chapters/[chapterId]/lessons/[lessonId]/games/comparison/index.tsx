@@ -1,52 +1,48 @@
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 
-export default function ComparisonMenu() {
-  const goToMode = (mode: string) => {
-    router.push(`/games/comparison/${mode}`);
+export default function ComparisonIndex() {
+  const { chapterId, lessonId } = useLocalSearchParams();
+
+  const goToMode = (modeId: string) => {
+    router.push(
+      `/(menu)/chapters/${chapterId}/lessons/${lessonId}/games/comparison/${modeId}`
+    );
   };
+
+  const modes = [
+    { id: "fixed", title: "🎯 10 câu cố định" },
+    { id: "timed", title: "⏱ Tính giờ" },
+    { id: "lives", title: "❤️ 3 mạng" },
+    { id: "hybrid", title: "⚡ Kết hợp" },
+  ];
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Chọn chế độ chơi So sánh số</Text>
-
-      <TouchableOpacity style={styles.button} onPress={() => goToMode("fixed")}>
-        <Text style={styles.buttonText}>📘 10 câu cố định</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.button} onPress={() => goToMode("timed")}>
-        <Text style={styles.buttonText}>⏱️ 60 giây</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.button} onPress={() => goToMode("lives")}>
-        <Text style={styles.buttonText}>❤️ 3 mạng</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => goToMode("hybrid")}
-      >
-        <Text style={styles.buttonText}>⚡ Kết hợp</Text>
-      </TouchableOpacity>
+      <Text style={styles.title}>Chọn chế độ chơi</Text>
+      {modes.map((m) => (
+        <TouchableOpacity
+          key={m.id}
+          style={styles.button}
+          onPress={() => goToMode(m.id)}
+        >
+          <Text style={styles.text}>{m.title}</Text>
+        </TouchableOpacity>
+      ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f0f8ff",
-  },
-  title: { fontSize: 22, fontWeight: "bold", marginBottom: 30 },
+  container: { flex: 1, justifyContent: "center", alignItems: "center" },
+  title: { fontSize: 22, fontWeight: "bold", marginBottom: 20 },
   button: {
     backgroundColor: "#3498db",
     padding: 15,
     borderRadius: 10,
     marginVertical: 10,
-    width: "70%",
+    width: "80%",
     alignItems: "center",
   },
-  buttonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+  text: { color: "#fff", fontSize: 18, fontWeight: "bold" },
 });

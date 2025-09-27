@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 // Import các game components (bổ sung)
 import CountingGame from "./types/CountingGame";
 import PointLineGame from "./types/PointLineGame";
+import ComparisonIndex from "./comparison";
 //import ChooseSignGame from "./ChooseSignGame";
 
 // Shared data (nên move ra file riêng)
@@ -76,6 +77,8 @@ export default function GameScreen() {
 
       //case "quiz":
       //  return <ChooseSignGame {...gameProps} />;
+      case "comparison":
+        return <ComparisonIndex />;
 
       default:
         return (
