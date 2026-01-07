@@ -5,9 +5,13 @@ export default function ComparisonIndex() {
   const { chapterId, lessonId } = useLocalSearchParams();
 
   const goToMode = (modeId: string) => {
-    router.push(
-      `/(menu)/chapters/${chapterId}/lessons/${lessonId}/games/comparison/${modeId}`
-    );
+    // Go to range selector first (0–10 / 10–100 / mix),
+    // then it will navigate to the selected mode.
+    router.push({
+      pathname:
+        "/(menu)/chapters/[chapterId]/lessons/[lessonId]/games/comparison/range-select",
+      params: { target: modeId, chapterId, lessonId },
+    });
   };
 
   const modes = [

@@ -1,9 +1,13 @@
 import { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import Tutorial from "./components/Tutorial";
+import { generateComparisonPair, normalizeRangeMode } from "./range";
 
 export default function FixedMode() {
+  const { rangeMode } = useLocalSearchParams<{ rangeMode?: string }>();
+  const selectedRange = normalizeRangeMode(rangeMode);
+
   const [step, setStep] = useState<"tutorial" | "select" | "game" | "result">(
     "tutorial"
   );
@@ -12,11 +16,7 @@ export default function FixedMode() {
   const [question, setQuestion] = useState(1);
   const [totalQuestions, setTotalQuestions] = useState<number | null>(null);
 
-  const generateNumbers = () => {
-    const a = Math.floor(Math.random() * 10) + 1;
-    const b = Math.floor(Math.random() * 10) + 1;
-    return { a, b };
-  };
+  const generateNumbers = () => generateComparisonPair(selectedRange);
 
   const startGame = (count: number | null) => {
     setTotalQuestions(count);
@@ -35,9 +35,6 @@ export default function FixedMode() {
     if (totalQuestions && question < totalQuestions) {
       setQuestion((prev) => prev + 1);
       setNumbers(generateNumbers());
-    } else if (totalQuestions === null) {
-      setQuestion((prev) => prev + 1);
-      setNumbers(generateNumbers());
     } else {
       setStep("result");
     }
@@ -49,17 +46,11 @@ export default function FixedMode() {
     return (
       <View style={styles.container}>
         <Tutorial />
-        <Text style={styles.text}>
-          📘 Hướng dẫn: Trả lời các phép so sánh trong số lượng câu hỏi đã chọn.
-        </Text>
         <TouchableOpacity
-          style={styles.startBtn}
+          style={styles.button}
           onPress={() => setStep("select")}
         >
-          <Text style={styles.startText}>➡ Tiếp tục</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.exitBtn} onPress={exitGame}>
-          <Text style={styles.startText}>⬅ Thoát</Text>
+          <Text style={styles.text}>Bắt đầu</Text>
         </TouchableOpacity>
       </View>
     );
@@ -68,132 +59,93 @@ export default function FixedMode() {
   if (step === "select") {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>Chọn số câu hỏi</Text>
-        {[10, 15, 20].map((num) => (
+        <Text style={styles.title}>Chọn số câu</Text>
+
+        {[10, 15, 20].map((n) => (
           <TouchableOpacity
-            key={num}
-            style={styles.startBtn}
-            onPress={() => startGame(num)}
+            key={n}
+            style={styles.button}
+            onPress={() => startGame(n)}
           >
-            <Text style={styles.startText}>{num} câu</Text>
+            <Text style={styles.text}>{n} câu</Text>
           </TouchableOpacity>
         ))}
-        <TouchableOpacity
-          style={styles.startBtn}
-          onPress={() => startGame(null)}
-        >
-          <Text style={styles.startText}>♾ Vô hạn</Text>
+
+        <TouchableOpacity style={styles.button} onPress={() => startGame(10)}>
+          <Text style={styles.text}>Chơi ngay</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.exitBtn} onPress={exitGame}>
-          <Text style={styles.startText}>⬅ Thoát</Text>
+
+        <TouchableOpacity style={styles.backBtn} onPress={exitGame}>
+          <Text style={styles.backText}>⬅ Quay lại</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  if (step === "result") {
+  if (step === "game") {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>Kết thúc 🎉</Text>
-        <Text style={styles.text}>
-          Điểm số: {score}/{totalQuestions}
+        <Text style={styles.title}>
+          Câu {question}/{totalQuestions}
         </Text>
-        <TouchableOpacity
-          style={styles.startBtn}
-          onPress={() => setStep("select")}
-        >
-          <Text style={styles.startText}>🔁 Chơi lại</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.exitBtn} onPress={exitGame}>
-          <Text style={styles.startText}>⬅ Thoát</Text>
-        </TouchableOpacity>
+
+        <Text style={styles.numbers}>
+          {numbers.a} ? {numbers.b}
+        </Text>
+
+        <View style={styles.row}>
+          {(["<", "=", ">"] as const).map((op) => (
+            <TouchableOpacity
+              key={op}
+              style={styles.choiceBtn}
+              onPress={() => checkAnswer(op)}
+            >
+              <Text style={styles.choiceText}>{op}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>
-        Câu {question}
-        {totalQuestions ? `/${totalQuestions}` : ""}
-      </Text>
-      <View style={styles.row}>
-        <Text style={styles.number}>{numbers.a}</Text>
-        <Text style={styles.placeholder}> ? </Text>
-        <Text style={styles.number}>{numbers.b}</Text>
-      </View>
-      <View style={styles.row}>
-        {["<", ">", "="].map((sign) => (
-          <TouchableOpacity
-            key={sign}
-            style={styles.btn}
-            onPress={() => checkAnswer(sign as "<" | ">" | "=")}
-          >
-            <Text style={styles.btnText}>{sign}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      <Text style={styles.text}>Điểm: {score}</Text>
-      <View style={styles.row}>
-        <TouchableOpacity
-          style={styles.pauseBtn}
-          onPress={() => setStep("select")}
-        >
-          <Text style={styles.startText}>⏸ Dừng</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.exitBtn} onPress={exitGame}>
-          <Text style={styles.startText}>⬅ Thoát</Text>
-        </TouchableOpacity>
-      </View>
+      <Text style={styles.title}>Kết quả</Text>
+      <Text style={styles.score}>Điểm: {score}</Text>
+
+      <TouchableOpacity style={styles.button} onPress={() => setStep("select")}>
+        <Text style={styles.text}>Chơi lại</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.button} onPress={exitGame}>
+        <Text style={styles.text}>Thoát</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f0f8ff",
-    padding: 20,
+  container: { flex: 1, justifyContent: "center", alignItems: "center" },
+  title: { fontSize: 22, fontWeight: "bold", marginBottom: 15 },
+  numbers: { fontSize: 48, marginVertical: 25, fontWeight: "bold" },
+  row: { flexDirection: "row" },
+  choiceBtn: {
+    backgroundColor: "#e67e22",
+    padding: 18,
+    borderRadius: 12,
+    marginHorizontal: 10,
   },
-  title: { fontSize: 22, fontWeight: "bold", marginBottom: 20 },
-  row: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
-  number: { fontSize: 36, fontWeight: "bold", marginHorizontal: 10 },
-  placeholder: { fontSize: 36, fontWeight: "bold", color: "#e67e22" },
-  btn: {
+  choiceText: { color: "#fff", fontSize: 28, fontWeight: "bold" },
+  button: {
     backgroundColor: "#3498db",
     padding: 15,
     borderRadius: 10,
-    marginHorizontal: 10,
-    minWidth: 60,
+    marginVertical: 10,
+    width: "80%",
     alignItems: "center",
   },
-  btnText: { color: "#fff", fontSize: 24, fontWeight: "bold" },
-  startBtn: {
-    backgroundColor: "#27ae60",
-    padding: 15,
-    borderRadius: 10,
-    marginTop: 15,
-    minWidth: 150,
-    alignItems: "center",
-  },
-  pauseBtn: {
-    backgroundColor: "#f39c12",
-    padding: 15,
-    borderRadius: 10,
-    minWidth: 120,
-    alignItems: "center",
-    marginHorizontal: 10,
-  },
-  exitBtn: {
-    backgroundColor: "#e74c3c",
-    padding: 15,
-    borderRadius: 10,
-    marginTop: 20,
-    minWidth: 120,
-    alignItems: "center",
-  },
-  startText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
-  text: { fontSize: 18, marginTop: 10, textAlign: "center" },
+  text: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+  score: { fontSize: 22, fontWeight: "bold", marginBottom: 20 },
+  backBtn: { marginTop: 10 },
+  backText: { fontSize: 16, fontWeight: "bold" },
 });
