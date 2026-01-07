@@ -1,8 +1,7 @@
-// games/types/CountingGame.tsx
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import React, { useMemo, useState } from "react";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
 
 interface CountingGameProps {
   chapterId: string;
@@ -17,359 +16,218 @@ interface CountingGameProps {
   };
 }
 
-interface Question {
-  items: string;
-  count: number;
-  options: number[];
+const TOTAL_QUESTIONS = 5;
+
+function randInt(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-export default function CountingGame({ chapterId, lessonId, gameId, gameData }: CountingGameProps) {
-  const [score, setScore] = useState(0);
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
-  const [isAnswered, setIsAnswered] = useState(false);
-  const [animation] = useState(new Animated.Value(0));
+function getRange(lessonId: string) {
+  // Chapter 1:
+  // lesson 1 => 1..10
+  // lesson 2 => 10..20
+  if (lessonId === "1") return { min: 1, max: 10 };
+  if (lessonId === "2") return { min: 10, max: 20 };
+  // fallback
+  return { min: 1, max: 10 };
+}
 
-  // Tạo câu hỏi dựa trên difficulty
-  const generateQuestions = (): Question[] => {
-    const emojis = ['🍎', '🐱', '⭐', '🍓', '🌸', '🚗', '📚', '🎈', '🍪', '🦋'];
-    const maxCount = gameData.difficulty === 'Dễ' ? 5 : gameData.difficulty === 'Trung bình' ? 10 : 15;
-    
-    return Array.from({ length: 5 }, (_, i) => {
-      const emoji = emojis[i % emojis.length];
-      const count = Math.floor(Math.random() * maxCount) + 1;
-      const items = emoji.repeat(count);
-      
-      // Tạo options với 1 đáp án đúng và 3 sai
-      const correctAnswer = count;
-      const wrongOptions : any = [];
-      
-      // Tạo các đáp án sai
-      for (let j = 0; j < 3; j++) {
-        let wrong;
-        do {
-          wrong = Math.max(1, correctAnswer + Math.floor(Math.random() * 6) - 3);
-        } while (wrong === correctAnswer || wrongOptions.includes(wrong));
-        wrongOptions.push(wrong);
-      }
-      
-      const options = [correctAnswer, ...wrongOptions].sort(() => Math.random() - 0.5);
-      
-      return { items, count: correctAnswer, options };
-    });
+function buildOptions(correct: number, min: number, max: number) {
+  const set = new Set<number>();
+  set.add(correct);
+  while (set.size < 4) {
+    set.add(randInt(min, max));
+  }
+  // shuffle
+  return Array.from(set).sort(() => Math.random() - 0.5);
+}
+
+export default function CountingGame({
+  chapterId,
+  lessonId,
+  gameId,
+  gameData,
+}: CountingGameProps) {
+  const range = useMemo(() => getRange(lessonId), [lessonId]);
+
+  const [qIndex, setQIndex] = useState(1);
+  const [score, setScore] = useState(0); // mỗi câu đúng +10
+  const [selected, setSelected] = useState<number | null>(null);
+  const [feedback, setFeedback] = useState<string>("");
+
+  const [currentCount, setCurrentCount] = useState(() =>
+    randInt(range.min, range.max)
+  );
+  const [options, setOptions] = useState(() =>
+    buildOptions(currentCount, range.min, range.max)
+  );
+
+  const resetQuestion = () => {
+    const nextCount = randInt(range.min, range.max);
+    setCurrentCount(nextCount);
+    setOptions(buildOptions(nextCount, range.min, range.max));
+    setSelected(null);
+    setFeedback("");
   };
 
-  const [questions] = useState<Question[]>(generateQuestions());
-  const currentQ = questions[currentQuestion];
+  const submit = (value: number) => {
+    if (selected !== null) return; // tránh bấm nhiều lần
+    setSelected(value);
 
-  const handleAnswer = (answer: number) => {
-    if (isAnswered) return;
-    
-    setSelectedAnswer(answer);
-    setIsAnswered(true);
-    
-    // Animation cho feedback
-    Animated.sequence([
-      Animated.timing(animation, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(animation, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      })
-    ]).start();
+    const isCorrect = value === currentCount;
+    if (isCorrect) {
+      setScore((s) => s + 10);
+      setFeedback("✅ Đúng rồi!");
+    } else {
+      setFeedback("❌ Sai rồi!");
+    }
 
     setTimeout(() => {
-      const isCorrect = answer === currentQ.count;
-      const newScore = isCorrect ? score + 10 : score;
-      setScore(newScore);
-
-      if (currentQuestion < questions.length - 1) {
-        setCurrentQuestion(currentQuestion + 1);
-        setSelectedAnswer(null);
-        setIsAnswered(false);
+      if (qIndex >= TOTAL_QUESTIONS) {
+        router.replace({
+          pathname: `/(menu)/chapters/[chapterId]/lessons/[lessonId]/games/result`,
+          params: {
+            chapterId,
+            lessonId,
+            gameId,
+            score: String(isCorrect ? score + 10 : score),
+            totalQuestions: String(TOTAL_QUESTIONS),
+          },
+        });
       } else {
-        // Game completed
-        completeGame(newScore);
+        setQIndex((i) => i + 1);
+        resetQuestion();
       }
-    }, 1500);
+    }, 700);
   };
 
-  const completeGame = (finalScore: number) => {
-    router.push({
-      pathname: `/(menu)/chapters/${chapterId}/lessons/${lessonId}/games/result` as any,
-      params: { 
-        chapterId, 
-        lessonId, 
-        gameId,
-        score: finalScore.toString(),
-        totalQuestions: questions.length.toString(),
-        gameTitle: gameData.title
-      }
-    });
-  };
-
-  const getButtonStyle = (option: number) => {
-    if (!isAnswered) return styles.optionButton;
-    
-    if (option === currentQ.count) return styles.correctAnswer;
-    if (option === selectedAnswer) return styles.wrongAnswer;
-    return styles.disabledButton;
-  };
-
-  if (!currentQ) {
+  const icons = "🍎"; // bạn có thể đổi sang 🍬 cho bài 2 nếu muốn
+  const renderIcons = () => {
+    // hiện tối đa 20 icon để không tràn UI
+    const n = Math.min(currentCount, 20);
     return (
-      <SafeAreaView style={styles.container}>
-        <Text style={styles.loadingText}>Đang tải câu hỏi...</Text>
-      </SafeAreaView>
+      <View style={styles.iconsWrap}>
+        {Array.from({ length: n }).map((_, i) => (
+          <Text key={i} style={styles.icon}>
+            {icons}
+          </Text>
+        ))}
+      </View>
     );
-  }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.gameTitle}>{gameData.title}</Text>
-        <View style={styles.scoreContainer}>
-          <Text style={styles.scoreText}>Điểm: {score}</Text>
-          <Text style={styles.progressText}>
-            Câu {currentQuestion + 1}/{questions.length}
-          </Text>
-        </View>
+      <Text style={styles.title}>{gameData.title || "Đếm"}</Text>
+
+      <View style={styles.topRow}>
+        <Text style={styles.score}>Điểm: {score}</Text>
+        <Text style={styles.q}>
+          Câu {qIndex}/{TOTAL_QUESTIONS}
+        </Text>
       </View>
 
-      {/* Progress Bar */}
-      <View style={styles.progressBar}>
-        <View 
-          style={[
-            styles.progressFill, 
-            { width: `${((currentQuestion + 1) / questions.length) * 100}%` }
-          ]} 
-        />
+      <View style={styles.card}>
+        <Text style={styles.prompt}>Đếm và chọn đáp án đúng:</Text>
+        {renderIcons()}
+        <Text style={styles.prompt2}>Có bao nhiêu?</Text>
       </View>
 
-      {/* Question */}
-      <View style={styles.questionContainer}>
-        <Text style={styles.questionTitle}>Đếm và chọn đáp án đúng:</Text>
-        <View style={styles.itemsContainer}>
-          <Text style={styles.itemsText}>{currentQ.items}</Text>
-        </View>
-        <Text style={styles.questionSubtitle}>Có bao nhiêu?</Text>
-      </View>
+      <View style={styles.optionsRow}>
+        {options.map((op) => {
+          const active = selected !== null;
+          const isCorrect = op === currentCount;
+          const isSelected = op === selected;
 
-      {/* Options */}
-      <View style={styles.optionsContainer}>
-        {currentQ.options.map((option) => (
-          <Animated.View
-            key={option}
-            style={[
-              { transform: [{ scale: selectedAnswer === option ? animation.interpolate({
-                inputRange: [0, 1],
-                outputRange: [1, 1.1]
-              }) : 1 }] }
-            ]}
-          >
+          return (
             <TouchableOpacity
-              style={getButtonStyle(option)}
-              onPress={() => handleAnswer(option)}
-              disabled={isAnswered}
+              key={op}
+              style={[
+                styles.circleBtn,
+                active && isSelected && !isCorrect && { opacity: 0.5 },
+                active && isCorrect && isSelected && { opacity: 1 },
+              ]}
+              onPress={() => submit(op)}
             >
-              <Text style={styles.optionText}>{option}</Text>
+              <Text style={styles.circleText}>{op}</Text>
             </TouchableOpacity>
-          </Animated.View>
-        ))}
+          );
+        })}
       </View>
 
-      {/* Feedback */}
-      {isAnswered && (
-        <View style={styles.feedbackContainer}>
-          <Text style={styles.feedbackText}>
-            {selectedAnswer === currentQ.count ? '🎉 Chính xác!' : '😅 Thử lại nhé!'}
-          </Text>
-          {selectedAnswer !== currentQ.count && (
-            <Text style={styles.correctAnswerText}>
-              Đáp án đúng là: {currentQ.count}
-            </Text>
-          )}
-        </View>
-      )}
+      <Text style={styles.feedback}>{feedback}</Text>
 
-      {/* Exit Button */}
-      <TouchableOpacity 
-        style={styles.exitButton} 
-        onPress={() => router.back()}
-      >
-        <Text style={styles.exitButtonText}>🚪 Thoát</Text>
+      <TouchableOpacity style={styles.exitBtn} onPress={() => router.back()}>
+        <Text style={styles.exitText}>🚪 Thoát</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f0f8ff',
-    padding: 20,
+  container: { flex: 1, padding: 16, backgroundColor: "#F6FBFF" },
+  title: { fontSize: 20, fontWeight: "800", textAlign: "center", marginTop: 6 },
+  topRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 10,
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: 20,
+  score: { fontSize: 16, fontWeight: "700", color: "#1B5E20" },
+  q: { fontSize: 16, fontWeight: "700", color: "#455A64" },
+
+  card: {
+    backgroundColor: "white",
+    borderRadius: 14,
+    padding: 16,
+    marginTop: 14,
+    elevation: 2,
   },
-  gameTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2c3e50',
-    marginBottom: 10,
-  },
-  scoreContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingHorizontal: 20,
-  },
-  scoreText: {
-    fontSize: 18,
-    color: '#27ae60',
-    fontWeight: 'bold',
-  },
-  progressText: {
-    fontSize: 16,
-    color: '#7f8c8d',
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: '#ecf0f1',
-    borderRadius: 4,
-    marginBottom: 30,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#27ae60',
-    borderRadius: 4,
-  },
-  questionContainer: {
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 15,
-    marginBottom: 30,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  questionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2c3e50',
-    marginBottom: 15,
-  },
-  itemsContainer: {
-    minHeight: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  itemsText: {
-    fontSize: 32,
-    lineHeight: 40,
-    textAlign: 'center',
-  },
-  questionSubtitle: {
-    fontSize: 16,
-    color: '#7f8c8d',
-    fontWeight: '600',
-  },
-  optionsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-around',
-    marginBottom: 20,
-  },
-  optionButton: {
-    backgroundColor: '#3498db',
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    justifyContent: 'center',
-    alignItems: 'center',
-    margin: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  correctAnswer: {
-    backgroundColor: '#27ae60',
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    justifyContent: 'center',
-    alignItems: 'center',
-    margin: 10,
-  },
-  wrongAnswer: {
-    backgroundColor: '#e74c3c',
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    justifyContent: 'center',
-    alignItems: 'center',
-    margin: 10,
-  },
-  disabledButton: {
-    backgroundColor: '#bdc3c7',
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    justifyContent: 'center',
-    alignItems: 'center',
-    margin: 10,
-  },
-  optionText: {
-    color: 'white',
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  feedbackContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  feedbackText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#27ae60',
-    marginBottom: 5,
-  },
-  correctAnswerText: {
+  prompt: { fontSize: 16, fontWeight: "700", textAlign: "center" },
+  prompt2: {
     fontSize: 14,
-    color: '#7f8c8d',
+    textAlign: "center",
+    marginTop: 8,
+    color: "#607D8B",
   },
-  exitButton: {
-    position: 'absolute',
-    bottom: 30,
-    left: 20,
-    right: 20,
-    backgroundColor: '#95a5a6',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
+
+  iconsWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    marginTop: 12,
   },
-  exitButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
+  icon: { fontSize: 26, margin: 4 },
+
+  optionsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 14,
+    marginTop: 18,
   },
-  loadingText: {
+  circleBtn: {
+    width: 64,
+    height: 64,
+    borderRadius: 999,
+    backgroundColor: "#2D9CDB",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  circleText: { color: "white", fontSize: 20, fontWeight: "900" },
+
+  feedback: {
+    textAlign: "center",
+    marginTop: 14,
     fontSize: 18,
-    textAlign: 'center',
-    color: '#7f8c8d',
-    marginTop: 50,
+    fontWeight: "800",
+    color: "#00897B",
   },
+  exitBtn: {
+    marginTop: "auto",
+    backgroundColor: "#B0BEC5",
+    padding: 14,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  exitText: { fontWeight: "800", color: "#263238" },
 });

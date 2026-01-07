@@ -14,8 +14,8 @@ export default function RangeSelect() {
   const go = (rangeMode: RangeMode) => {
     router.push({
       pathname:
-        `/(menu)/chapters/${chapterId}/lessons/${lessonId}/games/comparison/${target}` as any,
-      params: { rangeMode },
+        `/(menu)/chapters/[chapterId]/lessons/[lessonId]/games/comparison/${target}` as any,
+      params: { chapterId, lessonId, rangeMode },
     });
   };
 

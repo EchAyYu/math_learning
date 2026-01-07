@@ -1,12 +1,23 @@
+import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 
+function asString(v: string | string[] | undefined) {
+  return Array.isArray(v) ? v[0] : v;
+}
+
 export default function ComparisonIndex() {
-  const { chapterId, lessonId } = useLocalSearchParams();
+  const params = useLocalSearchParams<{
+    chapterId?: string | string[];
+    lessonId?: string | string[];
+  }>();
+
+  const chapterId = asString(params.chapterId);
+  const lessonId = asString(params.lessonId);
 
   const goToMode = (modeId: string) => {
-    // Go to range selector first (0–10 / 10–100 / mix),
-    // then it will navigate to the selected mode.
+    if (!chapterId || !lessonId) return;
+
     router.push({
       pathname:
         "/(menu)/chapters/[chapterId]/lessons/[lessonId]/games/comparison/range-select",
@@ -25,15 +36,22 @@ export default function ComparisonIndex() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Chọn chế độ chơi</Text>
-      {modes.map((m) => (
-        <TouchableOpacity
-          key={m.id}
-          style={styles.button}
-          onPress={() => goToMode(m.id)}
-        >
-          <Text style={styles.text}>{m.title}</Text>
-        </TouchableOpacity>
-      ))}
+
+      {!chapterId || !lessonId ? (
+        <Text style={{ marginTop: 10, color: "red" }}>
+          Thiếu chapterId/lessonId trong route!
+        </Text>
+      ) : (
+        modes.map((m) => (
+          <TouchableOpacity
+            key={m.id}
+            style={styles.button}
+            onPress={() => goToMode(m.id)}
+          >
+            <Text style={styles.text}>{m.title}</Text>
+          </TouchableOpacity>
+        ))
+      )}
     </View>
   );
 }
