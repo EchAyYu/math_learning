@@ -7,7 +7,7 @@ import {
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { chapterData } from "../data/lessonsData";
+import { chapterData } from "../data/lessons.data";
 
 // Định nghĩa data cho từng chapter
 
